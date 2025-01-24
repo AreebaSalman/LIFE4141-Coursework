@@ -1,0 +1,13 @@
+# Creating a bedfile
+# Convert LAB vs NENT Fst outliers to BED format
+awk 'BEGIN {OFS="\t"} {print $1, $2, $3}' LAB_vs_NENT_top1_percent_regions.tsv > LAB_vs_NENT_outliers.bed
+
+# Convert LAB vs ODN Fst outliers to BED format
+awk 'BEGIN {OFS="\t"} {print $1, $2, $3}' LAB_vs_ODN_top1_percent_regions.tsv > LAB_vs_ODN_outliers.bed
+
+# Overlapping genes with FST outlier regions
+# LAB vs NENT
+bedtools intersect -a LAB_vs_NENT_outliers.bed -b C_excelsa_V5_braker2_wRseq.gff3 > LAB_vs_NENT_genes.bed
+
+# LAB vs ODN
+bedtools intersect -a LAB_vs_ODN_outliers.bed -b C_excelsa_V5_braker2_wRseq.gff3 > LAB_vs_ODN_genes.bed
