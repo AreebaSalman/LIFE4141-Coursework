@@ -1,0 +1,157 @@
+# PCA
+# Loading the required libraries
+install(vcfR)
+install(adegenet)
+library(adegenet)
+library(vcfR)
+
+# Setting working directory
+setwd("C:/Users/HP/Desktop/R studio/Genomics")
+# Reading vcf file
+vcf <- read.vcfR("C:/Users/HP/Desktop/R studio/Genomics/LAB_NEN_ODN.clean_BI.ann.3mbChr5.vcf.gz")
+
+# Converting VCF to genlight object
+genlight_obj <- vcfR2genlight(vcf)
+
+# Defining populations based on sample naming
+pop(genlight_obj) <- substr(indNames(genlight_obj), 1, 3)
+
+# Performing PCA
+pca_result <- glPca(genlight_obj, nf = 2)
+
+# Extracting PCA coordinates
+pca_scores <- as.data.frame(pca_result$scores)
+pca_scores$Population <- pop(genlight_obj)
+
+# Calculating % variance explained
+percent_variance <- round(100 * pca_result$eig / sum(pca_result$eig), 1)
+
+# Defining colors and shapes for groups
+population_colors <- c("blue", "red", "green")
+population_shapes <- c(17, 15, 19)  # Different shapes for LAB, NEN, ODN
+
+# Adjusting the margins to mae a good plot
+par(mar = c(5, 4, 4, 8) + 0.1)  # Increase right margin
+
+# Plot PCA
+plot(
+  pca_scores[, 1], 
+  pca_scores[, 2],
+  col = population_colors[as.factor(pca_scores$Population)],
+  pch = population_shapes[as.factor(pca_scores$Population)],
+  xlab = paste0("PC1"),
+  ylab = paste0("PC2"),
+  main = "PCA Scatterplot",
+  cex = 1.5
+)
+
+# Add legend outside of the plot area
+legend(
+  "topright", 
+  inset = c(-0.35, 0),  # Move legend outside the plot
+  legend = levels(as.factor(pca_scores$Population)),
+  col = population_colors,
+  pch = population_shapes,
+  title = "Populations",
+  xpd = TRUE  # Allow legend to be outside the plot region
+)
+# Eplaining % Variance
+cat("Variance explained by PC1:", pca_result$eig[1] / sum(pca_result$eig), "\n")
+cat("Variance explained by PC2:", pca_result$eig[2] / sum(pca_result$eig), "\n")
+
+
+#FST Scanning
+# Create files by listing all sample IDs of the populations
+# LAB
+LAB_004
+LAB_1
+LAB_2
+LAB_300
+LAB_4
+LAB_400
+LAB_5
+LAB_500
+
+# NENT
+NEN_001
+NEN_003
+NEN_200
+NEN_300
+NEN_4
+NEN_5
+NEN_6
+
+#ODN
+ODN_01
+ODN_02
+ODN_03
+ODN_04
+ODN_05
+ODN_06
+ODN_07
+
+# Create and activate vcftools
+conda create -n vcftools -c bioconda vcftools
+conda activate vcftools
+
+# FST calculation for LAB vs NENT
+vcftools --gzvcf LAB_NEN_ODN.clean_BI.ann.3mbChr5.vcf.gz \
+         --max-missing 0.8 \                              # Include all the sites with less than 20% missing data
+         --maf 0.05 \                                     # Exclude rare alleles (minor allele frequency < 0.05)
+         --weir-fst-pop LAB_population.txt \              # Specify LAB population file
+         --weir-fst-pop NENT_population.txt \             # Specify NENT population file
+         --fst-window-size 1000 \                         # Window size of 1 kb
+         --fst-window-step 1000 \                         # Non-overlapping windows
+         --out LAB_vs_NENT                                # Output prefix
+
+# FST calculation for LAB vs ODN
+vcftools --gzvcf LAB_NEN_ODN.clean_BI.ann.3mbChr5.vcf.gz \
+         --max-missing 0.8 \                              # Include all the sites with less than 20% missing data
+         --maf 0.05 \                                     # Exclude rare alleles
+         --weir-fst-pop LAB_population.txt \              # Specify LAB population file
+         --weir-fst-pop ODN_population.txt \              # Specify ODN population file
+         --fst-window-size 1000 \                         # Window size of 1 kb
+         --fst-window-step 1000 \                         # Non-overlapping windows
+         --out LAB_vs_ODN                                 # Output prefix
+
+# Identifying top 1% FST outliers
+# Importing libraries
+import pandas as pd
+
+# Extracting top 1% Fst values
+def extract_top_fst(input_file, output_file):
+    # Read the Fst data
+    fst_data = pd.read_csv(input_file, sep="\t", comment='#')
+    
+    # Calculating the top 1% threshold
+    threshold = fst_data['WEIR_AND_COCKERHAM_FST'].quantile(0.99)
+    print(f"Top 1% threshold: {threshold}")
+
+    # Filtering the top 1% regions
+    top_fst = fst_data[fst_data['WEIR_AND_COCKERHAM_FST'] >= threshold]
+
+    # Saving the top 1% regions to a file
+    top_fst.to_csv(output_file, sep="\t", index=False)
+    print(f"Top 1% Fst regions saved to {output_file}")
+
+# Processing LAB vs NENT
+extract_top_fst("LAB_vs_NENT.windowed.weir.fst", "LAB_vs_NENT_top1_percent.bed")
+
+# Processing LAB vs ODN
+extract_top_fst("LAB_vs_ODN.windowed.weir.fst", "LAB_vs_ODN_top1_percent.bed")
+
+
+# Creating a bedfile
+# Convert LAB vs NENT Fst outliers to BED format
+awk 'BEGIN {OFS="\t"} {print $1, $2, $3}' LAB_vs_NENT_top1_percent_regions.tsv > LAB_vs_NENT_outliers.bed
+
+# Convert LAB vs ODN Fst outliers to BED format
+awk 'BEGIN {OFS="\t"} {print $1, $2, $3}' LAB_vs_ODN_top1_percent_regions.tsv > LAB_vs_ODN_outliers.bed
+
+# Overlapping genes with FST outlier regions
+# LAB vs NENT
+bedtools intersect -a LAB_vs_NENT_outliers.bed -b C_excelsa_V5_braker2_wRseq.gff3 > LAB_vs_NENT_genes.bed
+
+# LAB vs ODN
+bedtools intersect -a LAB_vs_ODN_outliers.bed -b C_excelsa_V5_braker2_wRseq.gff3 > LAB_vs_ODN_genes.bed
+
