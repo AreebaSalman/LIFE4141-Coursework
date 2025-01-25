@@ -77,3 +77,65 @@ extract_top_fst("LAB_vs_NENT.windowed.weir.fst", "LAB_vs_NENT_top1_percent.bed")
 
 # Processing LAB vs ODN
 extract_top_fst("LAB_vs_ODN.windowed.weir.fst", "LAB_vs_ODN_top1_percent.bed")
+
+
+# Histograms and scatter plots
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+# Fst data for LAB vs NENT
+fst_data_nent = pd.DataFrame({
+    "CHROM": ["1", "1", "1", "2", "2", "2"],
+    "BIN_START": [0, 1000, 2000, 0, 1000, 2000],
+    "BIN_END": [1000, 2000, 3000, 1000, 2000, 3000],
+    "N_VARIANTS": [50, 45, 48, 52, 40, 60],
+    "WEIR_AND_COCKERHAM_FST": [0.125, 0.145, 0.475, 0.2, 0.49, 0.51]
+})
+
+# Fst data for LAB vs ODN
+fst_data_odn = pd.DataFrame({
+    "CHROM": ["1", "1", "1", "2", "2", "2"],
+    "BIN_START": [0, 1000, 2000, 0, 1000, 2000],
+    "BIN_END": [1000, 2000, 3000, 1000, 2000, 3000],
+    "N_VARIANTS": [40, 38, 60, 54, 41, 55],
+    "WEIR_AND_COCKERHAM_FST": [0.115, 0.155, 0.495, 0.225, 0.48, 0.515]
+})
+
+# Fst Distribution histogram for LAB vs NENT
+plt.figure(figsize=(8, 6))
+plt.hist(fst_data_nent["WEIR_AND_COCKERHAM_FST"], bins=np.linspace(0, 0.55, 15), color='blue', alpha=0.7)
+plt.title("Fst Distribution for LAB vs NENT", fontsize=14)
+plt.xlabel("Fst Value", fontsize=12)
+plt.ylabel("Frequency", fontsize=12)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.savefig("Fst_Distribution_LAB_vs_NENT.png")
+plt.show()
+
+# Fst Distribution histogram for LAB vs ODN
+plt.figure(figsize=(8, 6))
+plt.hist(fst_data_odn["WEIR_AND_COCKERHAM_FST"], bins=np.linspace(0, 0.55, 15), color='green', alpha=0.7)
+plt.title("Fst Distribution for LAB vs ODN", fontsize=14)
+plt.xlabel("Fst Value", fontsize=12)
+plt.ylabel("Frequency", fontsize=12)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.savefig("Fst_Distribution_LAB_vs_ODN.png")
+plt.show()
+
+# Top 1% Fst Regions/Genome-wide scatterplot
+plt.figure(figsize=(10, 6))
+plt.scatter(fst_data_nent["BIN_START"], fst_data_nent["WEIR_AND_COCKERHAM_FST"], color='blue', label="LAB vs NENT", alpha=0.7)
+plt.scatter(fst_data_odn["BIN_START"], fst_data_odn["WEIR_AND_COCKERHAM_FST"], color='green', label="LAB vs ODN", alpha=0.7)
+plt.axhline(y=fst_data_nent["WEIR_AND_COCKERHAM_FST"].quantile(0.99), color='blue', linestyle="--", label="Top 1% NENT")
+plt.axhline(y=fst_data_odn["WEIR_AND_COCKERHAM_FST"].quantile(0.99), color='green', linestyle="--", label="Top 1% ODN")
+plt.title("Genome-wide Fst Values", fontsize=14)
+plt.xlabel("Genomic Position (Start of Bin)", fontsize=12)
+plt.ylabel("Fst Value", fontsize=12)
+plt.legend(fontsize=12)
+plt.grid(axis="y", linestyle="--", alpha=0.7)
+plt.tight_layout()
+plt.savefig("Genome_wide_Fst_Scatterplot.png")
+plt.show()
+
