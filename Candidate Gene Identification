@@ -1,3 +1,7 @@
+# Create and download bedtools in Conda environment
+conda create -n bedtools -c bioconda bedtools -y
+conda activate bedtools
+
 # Creating a bedfile
 # Convert LAB vs NENT Fst outliers to BED format
 awk 'BEGIN {OFS="\t"} {print $1, $2, $3}' LAB_vs_NENT_top1_percent_regions.tsv > LAB_vs_NENT_outliers.bed
